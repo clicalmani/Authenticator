@@ -1,14 +1,14 @@
 {
-    "name": "clicalmani/authenticator",
-    "description": "Web authentication",
+    "name": "clicalmani/collection",
+    "description": "Data collection structure",
     "type": "library",
     "require": {
         "php": ">=8.0"
     },
-    "license": "MIT",
+    "license": "proprietary",
     "autoload": {
         "psr-4": {
-            "Clicalmani\\Authenticator\\": "src/"
+            "Clicalmani\\Collection\\": "src/"
         }
     },
     "authors": [

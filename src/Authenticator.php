@@ -2,15 +2,16 @@
 namespace Clicalmani\Authenticator;
 
 use Clicalmani\Database\DB;
+use Clicalmani\Flesco\Auth\JWT;
 
-abstract class Authenticator implements \ArrayAccess 
+abstract class Authenticator
 {
 	/**
 	 * Max session inactivity time in minutes
 	 * 
 	 * @var int
 	 */
-	protected int $turnarround = 0;
+	protected int $turnarround = 1;
 
 	/**
 	 * Authenticated user
@@ -31,14 +32,16 @@ abstract class Authenticator implements \ArrayAccess
 	 *
 	 * @param mixed $user_id 
 	 */
-	public function __construct(protected $user_id)
-	{ 
+	public function __construct(protected mixed $user_id)
+	{
+		// Cast user ID to int
+		$this->user_id = (int) $this->user_id;
+
 		/**
 		 * Set user to user model
 		 */
 		$this->user  = \App\Models\User::find($this->user_id);
-
-		$this->jwt = new JWT($this->user_id, $this->turnarround ? $this->turnarround/(60*24): 1);
+		$this->jwt = new JWT($this->user_id, $this->turnarround ? $this->turnarround/(60*24): 1); // Default to one day token expiry
 	}
 	
 	/**
@@ -53,15 +56,17 @@ abstract class Authenticator implements \ArrayAccess
 	}
 
 	/**
-	 * Authenticate user
+	 * Authenticate user or renew user authentication.
 	 * 
 	 * @return void
 	 */
 	public function authenticate() : void
 	{
-		DB::table('auth_access')->insertOrUpdate([
-			['user_id' => $this->user_id, 'token' => $this->jwt->generateToken()]
-		]);
+		DB::table('auth_access')
+			->where('user_id = :user', 'AND', ['user' => (int) $this->user_id])
+			->insertOrUpdate([
+				['user_id' => $this->user_id, 'token' => $this->jwt->generateToken()]
+			]);
 	}
 
 	/**
@@ -72,7 +77,7 @@ abstract class Authenticator implements \ArrayAccess
 	public function isOnline() : bool
 	{
 		$auth = DB::table('auth_access')->where('user_id = :user_id', 'AND', ['user_id' => $this->user_id])->get('token')->first();
-		if ($auth) return $this->jwt->verifyToken($auth['token']);
+		if ($auth && $this->jwt->verifyToken($auth['token'])) return true;
 
 		return false;
 	}
